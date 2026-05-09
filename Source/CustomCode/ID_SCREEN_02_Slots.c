@@ -11,8 +11,7 @@
 ----------------------------------------------------------------------
 File        : ID_SCREEN_02_Slots.c
 Purpose     : Book selection screen
-              BookSelect draws the grid. Custom std buttons at bottom
-              handle navigation without AppWizard internals.
+              Uses timer to defer UI creation (avoid message nesting)
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -25,23 +24,21 @@ Purpose     : Book selection screen
 
 /*** Begin of user code area ***/
 
-static WM_HWIN _hScreen02 = 0;
-static WM_HWIN _hBtnOpen  = 0;
-static WM_HWIN _hBtnBack  = 0;
+#define TIMER_INIT   1
 
-/* Standard emWin callback for custom Open/Back buttons */
+static WM_HWIN _hScreen02 = 0;
+
 static void _BtnCallback(WM_MESSAGE *pMsg) {
-    WM_HWIN hWin = pMsg->hWin;
-    int Id = WM_GetId(hWin);
+    int Id = WM_GetId(pMsg->hWin);
 
     switch (pMsg->MsgId) {
         case WM_PAINT:
-            BUTTON_Callback(pMsg);  /* default button paint */
+            BUTTON_Callback(pMsg);
             break;
 
         case WM_NOTIFICATION_CLICKED:
             if (Id == GUI_ID_USER + 50) {
-                /* Open Book: update SCREEN_03 then show it */
+                /* Open Book */
                 const BOOK_INFO *bk = BookSelect_GetSelectedBook();
                 APPW_ROOT_INFO *pRoot = APPW_GetRootInfoByRootId(ID_SCREEN_03);
                 if (pRoot && bk) {
@@ -77,6 +74,26 @@ static void _BtnCallback(WM_MESSAGE *pMsg) {
     }
 }
 
+static void _CreateButtons(WM_HWIN hParent) {
+    WM_HWIN hBtn;
+
+    hBtn = BUTTON_CreateEx(312, 550, 180, 42, hParent,
+                            WM_CF_SHOW, 0, GUI_ID_USER + 50);
+    BUTTON_SetText(hBtn, "Open Book");
+    BUTTON_SetFont(hBtn, &GUI_Font16B_ASCII);
+    BUTTON_SetBkColor(hBtn, BUTTON_CI_UNPRESSED, COLOR_PRIMARY);
+    BUTTON_SetTextColor(hBtn, BUTTON_CI_UNPRESSED, GUI_WHITE);
+    WM_SetCallback(hBtn, _BtnCallback);
+
+    hBtn = BUTTON_CreateEx(532, 550, 180, 42, hParent,
+                            WM_CF_SHOW, 0, GUI_ID_USER + 51);
+    BUTTON_SetText(hBtn, "Back");
+    BUTTON_SetFont(hBtn, &GUI_Font16B_ASCII);
+    BUTTON_SetBkColor(hBtn, BUTTON_CI_UNPRESSED, COLOR_SECONDARY);
+    BUTTON_SetTextColor(hBtn, BUTTON_CI_UNPRESSED, GUI_WHITE);
+    WM_SetCallback(hBtn, _BtnCallback);
+}
+
 /*** End of user code area ***/
 
 /*********************************************************************
@@ -88,26 +105,13 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
   switch (pMsg->MsgId) {
     case WM_INIT_DIALOG:
       _hScreen02 = pMsg->hWin;
+      /* Defer UI creation to avoid message nesting in WM_INIT_DIALOG */
+      WM_CreateTimer(pMsg->hWin, TIMER_INIT, 50, 0);
+      break;
 
-      /* Create custom Open button at bottom */
-      _hBtnOpen = BUTTON_CreateEx(312, 550, 180, 42, _hScreen02,
-                                   WM_CF_SHOW, 0, GUI_ID_USER + 50);
-      BUTTON_SetText(_hBtnOpen, "Open Book");
-      BUTTON_SetFont(_hBtnOpen, &GUI_Font16B_ASCII);
-      BUTTON_SetBkColor(_hBtnOpen, BUTTON_CI_UNPRESSED, COLOR_PRIMARY);
-      BUTTON_SetTextColor(_hBtnOpen, BUTTON_CI_UNPRESSED, GUI_WHITE);
-      WM_SetCallback(_hBtnOpen, _BtnCallback);
-
-      /* Create custom Back button at bottom */
-      _hBtnBack = BUTTON_CreateEx(532, 550, 180, 42, _hScreen02,
-                                   WM_CF_SHOW, 0, GUI_ID_USER + 51);
-      BUTTON_SetText(_hBtnBack, "Back");
-      BUTTON_SetFont(_hBtnBack, &GUI_Font16B_ASCII);
-      BUTTON_SetBkColor(_hBtnBack, BUTTON_CI_UNPRESSED, COLOR_SECONDARY);
-      BUTTON_SetTextColor(_hBtnBack, BUTTON_CI_UNPRESSED, GUI_WHITE);
-      WM_SetCallback(_hBtnBack, _BtnCallback);
-
-      /* Create book grid overlay */
+    case WM_TIMER:
+      WM_DeleteTimer(pMsg->hWin, TIMER_INIT);
+      _CreateButtons(_hScreen02);
       BookSelect_Create(_hScreen02);
       BookSelect_Show();
       break;
