@@ -17,20 +17,11 @@ Purpose     : AppWizard managed file, function content could be changed
 #include "Application.h"
 #include "../Generated/Resource.h"
 #include "../Generated/ID_SCREEN_03.h"
+#include "BookSelect.h"
 
 /*** Begin of user code area ***/
-// Sample book title for display
-static const char* _sBookTitle = "Sample Book Title";
-
-// Sample book content for display
-static const char* _sBookContent = 
-    "This is a sample book content.\n\n"
-    "It contains multiple paragraphs and some text.\n\n"
-    "The content is designed to simulate a real e-book reader interface.\n\n"
-    "You can add more text here as needed.";
-
-// Page information string
-static const char* _sPageInfo = "Page 1 / 10";
+static const BOOK_INFO *_pCurrentBook = 0;
+static char _sPageInfo[32];
 /*** End of user code area ***/
 
 /*********************************************************************
@@ -46,17 +37,19 @@ static const char* _sPageInfo = "Page 1 / 10";
 void cbID_SCREEN_03(WM_MESSAGE * pMsg) {
     switch (pMsg->MsgId) {
     case WM_INIT_DIALOG:
-        // Set the book title text
-        TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_TITLE), _sBookTitle);
-        
-        // Set the book content text
-        TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_CONTENT), _sBookContent);
-        
-        // Set the page info text
-        TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_PAGE), _sPageInfo);
-        
-        // Set the progress bar value with error checking
+        _pCurrentBook = BookSelect_GetSelectedBook();
 
+        if (_pCurrentBook) {
+            TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_TITLE), _pCurrentBook->Title);
+        }
+
+        // Set page info
+        sprintf(_sPageInfo, "Page 1 / 10");
+        TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_PAGE), _sPageInfo);
+
+        // Set progress bar to match book progress
+        PROGBAR_SetValue(WM_GetDialogItem(pMsg->hWin, PROGRESS_BAR),
+                         _pCurrentBook ? _pCurrentBook->Progress : 0);
         break;
     }
 }

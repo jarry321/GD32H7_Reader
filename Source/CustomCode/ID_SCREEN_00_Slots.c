@@ -18,6 +18,7 @@ Purpose     : AppWizard managed file, function content could be changed
 #include "../Generated/Resource.h"
 #include "../Generated/ID_SCREEN_00.h"
 #include "ID_SCREEN_05.h"
+#include "BookSelect.h"
 
 /*** Begin of user code area ***/
 /*** End of user code area ***/
@@ -54,6 +55,27 @@ void ID_SCREEN_00__ID_BUTTON_00__WM_NOTIFICATION_CLICKED(APPW_ACTION_ITEM * pAct
   ID_SCREEN_05_Show();
   
   // Prevent default action (don't show ID_SCREEN_02)
+  *pResult = 1;
+}
+
+/*********************************************************************
+*
+*       ID_SCREEN_00__ID_BUTTON_01__WM_NOTIFICATION_CLICKED
+*
+*  Emitter:  ID_BUTTON_01
+*  Signal:   WM_NOTIFICATION_CLICKED
+*  Job:      Show Book Selection Screen
+*/
+void ID_SCREEN_00__ID_BUTTON_01__WM_NOTIFICATION_CLICKED(APPW_ACTION_ITEM * pAction, WM_HWIN hScreen, WM_MESSAGE * pMsg, int * pResult) {
+  GUI_USE_PARA(pAction);
+  GUI_USE_PARA(hScreen);
+  GUI_USE_PARA(pMsg);
+
+  // Button 01 (Music icon) - show Book Selection screen
+  BookSelect_Create();
+  BookSelect_Show();
+
+  // Prevent default action
   *pResult = 1;
 }
 
