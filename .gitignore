@@ -1,0 +1,69 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.sln.docstates
+*.vcxproj.user
+Browse.VC.db
+Browse.VC.opendb
+*.db
+*.sdf
+*.opensdf
+*.ilk
+*.pdb
+*.idb
+*.ipdb
+*.iobj
+*.recipe
+*.tlog/
+*.lastbuildstate
+*.log
+*.psess
+*.vsp
+*.vspx
+*.scc
+*.ncb
+
+# Build outputs
+Simulation/Output/
+Simulation/Exe/
+Simulation/Data/
+*.exe
+*.dll
+*.lib
+*.obj
+*.o
+*.exp
+
+# AppWizard backup & temp
+*.backup
+*.tmp
+
+# OS files
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Archives (keep source, not zip)
+*.7z
+*.zip
+*.rar
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Large SDK & toolchains
+GD32EB_v1.5.8_Rel/
+GD32H7xx_Demo_Suites_V2.1.0/
+RTX5 All In One(AppWizard V2.0)/
+SeggerEval_WIN32_MSVC_GUI_V656/
+emwin_freetype/
+
+# Data & temp
+Data/
+Picture/
+Picture01/
+.uploads/
+*.pdf

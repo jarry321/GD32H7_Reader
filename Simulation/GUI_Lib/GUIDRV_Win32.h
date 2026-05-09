@@ -1,0 +1,28 @@
+/*********************************************************************
+*                  (c) SEGGER Microcontroller GmbH                   *
+*                        The Embedded Experts                        *
+*                           www.segger.com                           *
+**********************************************************************
+
+----------------------------------------------------------------------
+File        : GUIDRV_Win32.h
+Purpose     : Interface definition for GUIDRV_Win32 driver
+---------------------------END-OF-HEADER------------------------------
+*/
+
+#ifndef GUIDRV_WIN32_H
+#define GUIDRV_WIN32_H
+
+#if defined(__cplusplus)
+extern "C" {     /* Make sure we have C-declarations in C++ programs */
+#endif
+
+void GUIDRV_Win32_Config(void);  // Dummy
+
+#if defined(__cplusplus)
+}
+#endif
+
+#endif
+
+/*************************** End of file ****************************/
