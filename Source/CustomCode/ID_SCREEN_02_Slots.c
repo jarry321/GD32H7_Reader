@@ -26,7 +26,8 @@ Purpose     : Book selection screen
 
 #define TIMER_INIT   1
 
-static WM_HWIN _hScreen02 = 0;
+static WM_HWIN  _hScreen02 = 0;
+static WM_HMEM  _hTimer   = 0;
 
 static void _BtnCallback(WM_MESSAGE *pMsg) {
     int Id = WM_GetId(pMsg->hWin);
@@ -105,12 +106,12 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
   switch (pMsg->MsgId) {
     case WM_INIT_DIALOG:
       _hScreen02 = pMsg->hWin;
-      /* Defer UI creation to avoid message nesting in WM_INIT_DIALOG */
-      WM_CreateTimer(pMsg->hWin, TIMER_INIT, 50, 0);
+      _hTimer = WM_CreateTimer(pMsg->hWin, TIMER_INIT, 50, 0);
       break;
 
     case WM_TIMER:
-      WM_DeleteTimer(pMsg->hWin, TIMER_INIT);
+      WM_DeleteTimer(_hTimer);
+      _hTimer = 0;
       _CreateButtons(_hScreen02);
       BookSelect_Create(_hScreen02);
       BookSelect_Show();
