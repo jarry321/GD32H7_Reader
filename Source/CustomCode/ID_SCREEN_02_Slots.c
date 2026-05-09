@@ -10,7 +10,9 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File        : ID_SCREEN_02_Slots.c
-Purpose     : Book selection - hosts BookSelect overlay + action buttons
+Purpose     : Book selection screen
+              BookSelect draws the grid. Custom std buttons at bottom
+              handle navigation without AppWizard internals.
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -23,6 +25,58 @@ Purpose     : Book selection - hosts BookSelect overlay + action buttons
 
 /*** Begin of user code area ***/
 
+static WM_HWIN _hScreen02 = 0;
+static WM_HWIN _hBtnOpen  = 0;
+static WM_HWIN _hBtnBack  = 0;
+
+/* Standard emWin callback for custom Open/Back buttons */
+static void _BtnCallback(WM_MESSAGE *pMsg) {
+    WM_HWIN hWin = pMsg->hWin;
+    int Id = WM_GetId(hWin);
+
+    switch (pMsg->MsgId) {
+        case WM_PAINT:
+            BUTTON_Callback(pMsg);  /* default button paint */
+            break;
+
+        case WM_NOTIFICATION_CLICKED:
+            if (Id == GUI_ID_USER + 50) {
+                /* Open Book: update SCREEN_03 then show it */
+                const BOOK_INFO *bk = BookSelect_GetSelectedBook();
+                APPW_ROOT_INFO *pRoot = APPW_GetRootInfoByRootId(ID_SCREEN_03);
+                if (pRoot && bk) {
+                    WM_HWIN hReader = APPW_CreateRoot(pRoot, WM_HBKWIN);
+                    WM_HWIN hItem;
+                    char buf[32];
+
+                    hItem = WM_GetDialogItem(hReader, TEXT_TITLE);
+                    if (hItem) TEXT_SetText(hItem, bk->Title);
+
+                    hItem = WM_GetDialogItem(hReader, TEXT_PAGE);
+                    sprintf(buf, "Page 1 / 10");
+                    if (hItem) TEXT_SetText(hItem, buf);
+
+                    hItem = WM_GetDialogItem(hReader, PROGRESS_BAR);
+                    if (hItem) PROGBAR_SetValue(hItem, bk->Progress);
+
+                    WM_ShowWindow(hReader);
+                }
+            } else if (Id == GUI_ID_USER + 51) {
+                /* Back to SCREEN_00 */
+                APPW_ROOT_INFO *pRoot = APPW_GetRootInfoByRootId(ID_SCREEN_00);
+                if (pRoot) {
+                    WM_HWIN hMenu = APPW_CreateRoot(pRoot, WM_HBKWIN);
+                    WM_ShowWindow(hMenu);
+                }
+            }
+            break;
+
+        default:
+            WM_DefaultProc(pMsg);
+            break;
+    }
+}
+
 /*** End of user code area ***/
 
 /*********************************************************************
@@ -30,36 +84,33 @@ Purpose     : Book selection - hosts BookSelect overlay + action buttons
 *       Public code
 */
 
-/*********************************************************************
-*
-*       cbID_SCREEN_02
-*/
 void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
   switch (pMsg->MsgId) {
-    case WM_INIT_DIALOG: {
-      WM_HWIN hBtn00, hBtn01;
+    case WM_INIT_DIALOG:
+      _hScreen02 = pMsg->hWin;
 
-      /* Reposition Button_00 (MINIBLUE) to bottom: "Open Book" */
-      hBtn00 = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_00);
-      if (hBtn00) {
-        WM_MoveTo(hBtn00, 362, 540);
-        WM_SetSize(hBtn00, 300, 50);
-        BUTTON_SetText(hBtn00, "Open Book");
-      }
+      /* Create custom Open button at bottom */
+      _hBtnOpen = BUTTON_CreateEx(312, 550, 180, 42, _hScreen02,
+                                   WM_CF_SHOW, 0, GUI_ID_USER + 50);
+      BUTTON_SetText(_hBtnOpen, "Open Book");
+      BUTTON_SetFont(_hBtnOpen, &GUI_Font16B_ASCII);
+      BUTTON_SetBkColor(_hBtnOpen, BUTTON_CI_UNPRESSED, COLOR_PRIMARY);
+      BUTTON_SetTextColor(_hBtnOpen, BUTTON_CI_UNPRESSED, GUI_WHITE);
+      WM_SetCallback(_hBtnOpen, _BtnCallback);
 
-      /* Reposition Button_01 to top-right: "Back" */
-      hBtn01 = WM_GetDialogItem(pMsg->hWin, ID_BUTTON_01);
-      if (hBtn01) {
-        WM_MoveTo(hBtn01, 924, 12);
-        WM_SetSize(hBtn01, 80, 32);
-        BUTTON_SetText(hBtn01, "Back");
-      }
+      /* Create custom Back button at bottom */
+      _hBtnBack = BUTTON_CreateEx(532, 550, 180, 42, _hScreen02,
+                                   WM_CF_SHOW, 0, GUI_ID_USER + 51);
+      BUTTON_SetText(_hBtnBack, "Back");
+      BUTTON_SetFont(_hBtnBack, &GUI_Font16B_ASCII);
+      BUTTON_SetBkColor(_hBtnBack, BUTTON_CI_UNPRESSED, COLOR_SECONDARY);
+      BUTTON_SetTextColor(_hBtnBack, BUTTON_CI_UNPRESSED, GUI_WHITE);
+      WM_SetCallback(_hBtnBack, _BtnCallback);
 
-      /* Create book grid overlay (does NOT cover button area at bottom) */
-      BookSelect_Create(pMsg->hWin);
+      /* Create book grid overlay */
+      BookSelect_Create(_hScreen02);
       BookSelect_Show();
       break;
-    }
 
     default:
       break;
@@ -69,47 +120,22 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
 /*********************************************************************
 *
 *       ID_SCREEN_02__ID_BUTTON_00__WM_NOTIFICATION_CLICKED
-*
-*  Emitter:  ID_BUTTON_00 (now repurposed as "Open Book")
-*  Job:      Push selected book data to SCREEN_03, then navigate
 */
 void ID_SCREEN_02__ID_BUTTON_00__WM_NOTIFICATION_CLICKED(APPW_ACTION_ITEM * pAction, WM_HWIN hScreen, WM_MESSAGE * pMsg, int * pResult) {
-  const BOOK_INFO *bk;
-  APPW_ROOT_INFO *pRoot03;
-  WM_HWIN hReader;
-  char buf[32];
-
   GUI_USE_PARA(pAction);
+  GUI_USE_PARA(hScreen);
   GUI_USE_PARA(pMsg);
-
-  bk = BookSelect_GetSelectedBook();
-  pRoot03 = APPW_GetRootInfoByRootId(ID_SCREEN_03);
-
-  if (pRoot03 && bk) {
-    hReader = APPW_CreateRoot(pRoot03, WM_HBKWIN);
-    TEXT_SetText(WM_GetDialogItem(hReader, TEXT_TITLE), bk->Title);
-    sprintf(buf, "Page 1 / 10");
-    TEXT_SetText(WM_GetDialogItem(hReader, TEXT_PAGE), buf);
-    PROGBAR_SetValue(WM_GetDialogItem(hReader, PROGRESS_BAR), bk->Progress);
-  }
-
-  /* Let AppWizard handle the SCREEN_02 → SCREEN_03 transition */
   *pResult = 0;
 }
 
 /*********************************************************************
 *
 *       ID_SCREEN_02__ID_BUTTON_01__WM_NOTIFICATION_CLICKED
-*
-*  Emitter:  ID_BUTTON_01 (now repurposed as "Back")
-*  Job:      Return to SCREEN_00 main menu
 */
 void ID_SCREEN_02__ID_BUTTON_01__WM_NOTIFICATION_CLICKED(APPW_ACTION_ITEM * pAction, WM_HWIN hScreen, WM_MESSAGE * pMsg, int * pResult) {
   GUI_USE_PARA(pAction);
   GUI_USE_PARA(hScreen);
   GUI_USE_PARA(pMsg);
-
-  /* Let AppWizard handle SCREEN_02 → SCREEN_00 transition */
   *pResult = 0;
 }
 
