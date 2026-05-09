@@ -50,12 +50,18 @@ void Reader_SetSelectedBook(int index) {
 */
 
 void cbID_SCREEN_03(WM_MESSAGE * pMsg) {
+    WM_HWIN hItem;
     switch (pMsg->MsgId) {
     case WM_INIT_DIALOG:
-        TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_TITLE), _BookTitles[_Selected]);
+        hItem = WM_GetDialogItem(pMsg->hWin, TEXT_TITLE);
+        if (hItem) TEXT_SetText(hItem, _BookTitles[_Selected]);
+
+        hItem = WM_GetDialogItem(pMsg->hWin, TEXT_PAGE);
         sprintf(_sPageInfo, "Page 1 / 10");
-        TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_PAGE), _sPageInfo);
-        PROGBAR_SetValue(WM_GetDialogItem(pMsg->hWin, PROGRESS_BAR), 15);
+        if (hItem) TEXT_SetText(hItem, _sPageInfo);
+
+        hItem = WM_GetDialogItem(pMsg->hWin, PROGRESS_BAR);
+        if (hItem) PROGBAR_SetValue(hItem, 15);
         break;
     }
 }

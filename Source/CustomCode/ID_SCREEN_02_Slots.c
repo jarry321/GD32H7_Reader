@@ -42,12 +42,9 @@ static const char *_BookTitles[] = {
 static int     _Selected = 0;
 static WM_HMEM _hTimer  = 0;
 
-/* Standard emWin callback for book buttons - just records selection */
+/* Custom callback for book buttons - records selection, forwards rest */
 static void _BookBtnCb(WM_MESSAGE *pMsg) {
     switch (pMsg->MsgId) {
-        case WM_PAINT:
-            BUTTON_Callback(pMsg);
-            break;
         case WM_NOTIFICATION_CLICKED:
             {
                 int idx;
@@ -56,7 +53,7 @@ static void _BookBtnCb(WM_MESSAGE *pMsg) {
             }
             break;
         default:
-            WM_DefaultProc(pMsg);
+            BUTTON_Callback(pMsg);
             break;
     }
 }
