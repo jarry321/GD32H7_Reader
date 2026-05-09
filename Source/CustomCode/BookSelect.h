@@ -27,9 +27,12 @@ Purpose     : Book Selection Screen - Header
 #define CARD_GAP_X          16
 #define CARD_GAP_Y          16
 #define GRID_LEFT           ((BOOKSELECT_WIDTH - 4 * CARD_W - 3 * CARD_GAP_X) / 2)
-#define GRID_TOP            (HEADER_H + 16)
+#define GRID_TOP            (BS_HEADER_H + 16)
 #define COVER_H             150
 #define MAX_BOOKS           12
+
+/* Custom message sent to parent when a book is selected */
+#define WM_BOOK_SELECTED    (WM_USER + 0x10)
 
 /*********************************************************************
 *
@@ -46,12 +49,13 @@ typedef struct {
 *
 *       Functions
 */
-void BookSelect_Create(void);
+void BookSelect_Create(WM_HWIN hNotify);
 void BookSelect_Show(void);
 void BookSelect_Hide(void);
 void cbBookSelect(WM_MESSAGE *pMsg);
 
 const BOOK_INFO *BookSelect_GetSelectedBook(void);
+int  BookSelect_GetSelectedIndex(void);
 
 #endif  // BOOKSELECT_H
 

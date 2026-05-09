@@ -10,9 +10,6 @@ Purpose     : Book Selection Screen - Custom drawn screen showing
 */
 
 #include "BookSelect.h"
-#include "../Generated/Resource.h"
-#include "../Generated/ID_SCREEN_02.h"
-#include "../Generated/ID_SCREEN_03.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -32,13 +29,9 @@ static BOOK_INFO _Books[] = {
 };
 #define BOOK_COUNT (sizeof(_Books) / sizeof(_Books[0]))
 
-static int _SelectedIndex = -1;
-
-/*********************************************************************
-*
-*       Static data
-*/
+static int     _SelectedIndex = 0;
 static WM_HWIN _hScreen = 0;
+static WM_HWIN _hNotify  = 0;   /* Window to notify on book selection */
 
 /*********************************************************************
 *
@@ -61,10 +54,14 @@ static void _DrawCard(int index) {
     GUI_RECT r;
     BOOK_INFO *bk = &_Books[index];
     int titleY, authorY, progY;
+    int cx, cy;
+    char letter[2];
+    char buf[16];
+    int barW, fillW;
 
     _GetCardRect(index, &r);
 
-    /* Card shadow / border */
+    /* Card border */
     GUI_SetColor(COLOR_DIVIDER);
     GUI_DrawRoundedRect(r.x0, r.y0, r.x1, r.y1, 10);
 
@@ -72,18 +69,16 @@ static void _DrawCard(int index) {
     GUI_SetColor(bk->CoverColor);
     GUI_FillRoundedRect(r.x0 + 2, r.y0 + 2, r.x1 - 2, r.y0 + COVER_H, 8);
 
-    /* Cover decoration - diagonal stripes */
-    {
-        int cx = (r.x0 + r.x1) / 2;
-        int cy = r.y0 + COVER_H / 2;
-        GUI_SetColor(GUI_WHITE);
-        GUI_SetFont(&GUI_Font24B_ASCII);
-        /* Draw first letter of title as icon */
-        char letter[2] = {bk->Title[0], '\0'};
-        GUI_DispStringAt(letter, cx - 14, cy - 20);
-    }
+    /* Cover letter */
+    cx = (r.x0 + r.x1) / 2;
+    cy = r.y0 + COVER_H / 2;
+    GUI_SetColor(GUI_WHITE);
+    GUI_SetFont(&GUI_Font24B_ASCII);
+    letter[0] = bk->Title[0];
+    letter[1] = '\0';
+    GUI_DispStringAt(letter, cx - 14, cy - 20);
 
-    /* Card body background */
+    /* Card body */
     GUI_SetColor(COLOR_CARD_BG);
     GUI_FillRoundedRect(r.x0 + 2, r.y0 + COVER_H, r.x1 - 2, r.y1 - 2, 0);
 
@@ -101,26 +96,21 @@ static void _DrawCard(int index) {
 
     /* Progress bar */
     progY = authorY + 24;
-    {
-        int barW = CARD_W - 24;
-        GUI_SetColor(COLOR_DIVIDER);
-        GUI_FillRoundedRect(r.x0 + 12, progY, r.x0 + 12 + barW, progY + 6, 3);
-        if (bk->Progress > 0) {
-            int fillW = (barW * bk->Progress) / 100;
-            if (fillW < 6) fillW = 6;
-            GUI_SetColor(bk->Progress == 100 ? COLOR_SUCCESS : COLOR_PRIMARY);
-            GUI_FillRoundedRect(r.x0 + 12, progY, r.x0 + 12 + fillW, progY + 6, 3);
-        }
+    barW = CARD_W - 24;
+    GUI_SetColor(COLOR_DIVIDER);
+    GUI_FillRoundedRect(r.x0 + 12, progY, r.x0 + 12 + barW, progY + 6, 3);
+    if (bk->Progress > 0) {
+        fillW = (barW * bk->Progress) / 100;
+        if (fillW < 6) fillW = 6;
+        GUI_SetColor(bk->Progress == 100 ? COLOR_SUCCESS : COLOR_PRIMARY);
+        GUI_FillRoundedRect(r.x0 + 12, progY, r.x0 + 12 + fillW, progY + 6, 3);
     }
 
     /* Progress text */
-    {
-        char buf[16];
-        GUI_SetColor(COLOR_TEXT_SECONDARY);
-        GUI_SetFont(&GUI_Font13_ASCII);
-        sprintf(buf, "%d%%", bk->Progress);
-        GUI_DispStringAt(buf, r.x1 - 42, progY + 12);
-    }
+    GUI_SetColor(COLOR_TEXT_SECONDARY);
+    GUI_SetFont(&GUI_Font13_ASCII);
+    sprintf(buf, "%d%%", bk->Progress);
+    GUI_DispStringAt(buf, r.x1 - 42, progY + 12);
 }
 
 /*********************************************************************
@@ -128,20 +118,15 @@ static void _DrawCard(int index) {
 *       _DrawHeader
 */
 static void _DrawHeader(void) {
-    /* Header background */
     GUI_SetColor(COLOR_CARD_BG);
     GUI_FillRect(0, 0, BOOKSELECT_WIDTH, BS_HEADER_H);
-
-    /* Bottom border */
     GUI_SetColor(COLOR_DIVIDER);
     GUI_DrawHLine(BS_HEADER_H - 1, 0, BOOKSELECT_WIDTH);
 
-    /* Back button hint */
     GUI_SetColor(COLOR_PRIMARY);
     GUI_SetFont(&GUI_Font16_ASCII);
     GUI_DispStringAt("<- Back", 16, 18);
 
-    /* Title */
     GUI_SetColor(COLOR_TEXT_PRIMARY);
     GUI_SetFont(&GUI_Font24B_ASCII);
     GUI_DispStringAt("My Books", (BOOKSELECT_WIDTH - 120) / 2, 12);
@@ -153,24 +138,11 @@ static void _DrawHeader(void) {
 */
 static void _OnPaint(void) {
     int i;
-
     GUI_SetBkColor(COLOR_BACKGROUND);
     GUI_Clear();
-
     _DrawHeader();
-
     for (i = 0; i < (int)BOOK_COUNT; i++) {
         _DrawCard(i);
-    }
-
-    /* Selected highlight */
-    if (_SelectedIndex >= 0) {
-        GUI_RECT r;
-        _GetCardRect(_SelectedIndex, &r);
-        GUI_SetColor(COLOR_PRIMARY);
-        GUI_SetPenSize(3);
-        GUI_DrawRoundedRect(r.x0 - 1, r.y0 - 1, r.x1 + 1, r.y1 + 1, 10);
-        GUI_SetPenSize(1);
     }
 }
 
@@ -184,55 +156,24 @@ static void _OnTouch(WM_MESSAGE *pMsg) {
 
     if (!pState || !pState->Pressed) return;
 
-    /* Check Back button - return to SCREEN_00 main menu */
+    /* Back button → notify parent to return to main menu */
     if (pState->x >= 0 && pState->x <= 100 &&
         pState->y >= 0 && pState->y <= BS_HEADER_H) {
-        APPW_ROOT_INFO *pRoot = APPW_GetRootInfoByRootId(ID_SCREEN_00);
-        BookSelect_Hide();
-        if (pRoot) {
-            WM_HWIN hRoot = APPW_CreateRoot(pRoot, WM_HBKWIN);
-            WM_ShowWindow(hRoot);
+        if (_hNotify) {
+            WM_SendMessageNoPara(_hNotify, WM_USER + 0x11);
         }
         return;
     }
 
-    /* Check each book card */
+    /* Book card touch → notify parent which handles navigation */
     for (i = 0; i < (int)BOOK_COUNT; i++) {
         GUI_RECT r;
         _GetCardRect(i, &r);
         if (pState->x >= r.x0 && pState->x <= r.x1 &&
             pState->y >= r.y0 && pState->y <= r.y1) {
             _SelectedIndex = i;
-            BookSelect_Hide();
-
-            /* Update SCREEN_03 widgets with selected book, then navigate */
-            {
-                APPW_ROOT_INFO *pRoot03 = APPW_GetRootInfoByRootId(ID_SCREEN_03);
-                APPW_ROOT_INFO *pRoot02 = APPW_GetRootInfoByRootId(ID_SCREEN_02);
-                BOOK_INFO *bk = &_Books[_SelectedIndex];
-
-                /* Pre-set SCREEN_03 content */
-                if (pRoot03) {
-                    WM_HWIN hReader = APPW_CreateRoot(pRoot03, WM_HBKWIN);
-                    char buf[32];
-                    TEXT_SetText(WM_GetDialogItem(hReader, TEXT_TITLE), bk->Title);
-                    sprintf(buf, "Page 1 / 10");
-                    TEXT_SetText(WM_GetDialogItem(hReader, TEXT_PAGE), buf);
-                    PROGBAR_SetValue(WM_GetDialogItem(hReader, PROGRESS_BAR), bk->Progress);
-                }
-
-                /* Trigger AppWizard transition SCREEN_02 → SCREEN_03 */
-                if (pRoot02) {
-                    WM_HWIN hScreen02 = APPW_CreateRoot(pRoot02, WM_HBKWIN);
-                    WM_HWIN hBtn = WM_GetDialogItem(hScreen02, ID_BUTTON_00);
-                    if (hBtn) {
-                        WM_MESSAGE msg;
-                        msg.MsgId = WM_NOTIFY_PARENT;
-                        msg.Data.v = WM_NOTIFICATION_CLICKED;
-                        msg.hWinSrc = hBtn;
-                        WM_SendMessage(hScreen02, &msg);
-                    }
-                }
+            if (_hNotify) {
+                WM_SendMessageNoPara(_hNotify, WM_BOOK_SELECTED);
             }
             return;
         }
@@ -244,71 +185,54 @@ static void _OnTouch(WM_MESSAGE *pMsg) {
 *       Public code
 */
 
-/*********************************************************************
-*
-*       cbBookSelect
-*/
 void cbBookSelect(WM_MESSAGE *pMsg) {
     switch (pMsg->MsgId) {
         case WM_PAINT:
             _OnPaint();
             break;
-
         case WM_TOUCH:
             _OnTouch(pMsg);
             break;
-
         default:
             WM_DefaultProc(pMsg);
             break;
     }
 }
 
-/*********************************************************************
-*
-*       BookSelect_Create
-*/
-void BookSelect_Create(void) {
+void BookSelect_Create(WM_HWIN hNotify) {
+    _hNotify = hNotify;
     if (_hScreen == 0) {
         _hScreen = WM_CreateWindowAsChild(0, 0,
             BOOKSELECT_WIDTH, BOOKSELECT_HEIGHT,
-            WM_HBKWIN, WM_CF_SHOW | WM_CF_MEMDEV,
+            hNotify, WM_CF_SHOW | WM_CF_MEMDEV,
             cbBookSelect, 0);
     }
 }
 
-/*********************************************************************
-*
-*       BookSelect_Show
-*/
 void BookSelect_Show(void) {
     if (_hScreen == 0) {
-        BookSelect_Create();
+        BookSelect_Create(0);
     }
     WM_ShowWindow(_hScreen);
     WM_BringToTop(_hScreen);
     WM_InvalidateWindow(_hScreen);
 }
 
-/*********************************************************************
-*
-*       BookSelect_Hide
-*/
 void BookSelect_Hide(void) {
     if (_hScreen != 0) {
         WM_HideWindow(_hScreen);
     }
 }
 
-/*********************************************************************
-*
-*       BookSelect_GetSelectedBook
-*/
 const BOOK_INFO *BookSelect_GetSelectedBook(void) {
     if (_SelectedIndex >= 0 && _SelectedIndex < (int)BOOK_COUNT) {
         return &_Books[_SelectedIndex];
     }
     return &_Books[0];
+}
+
+int BookSelect_GetSelectedIndex(void) {
+    return _SelectedIndex;
 }
 
 /*************************** End of file ****************************/
