@@ -87,13 +87,13 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
     case WM_TIMER:
       WM_DeleteTimer(_hTimer);
       _hTimer = 0;
-      /* Create book selection buttons in 4-column grid */
+      /* Create book selection buttons in 4x2 grid below MINIBLUE (y=210) */
       for (i = 0; i < (int)BOOK_COUNT; i++) {
         col = i % 4;
         row = i / 4;
         x = 16 + col * 248;
-        y = 16 + row * 80;
-        hBtn = BUTTON_CreateEx(x, y, 232, 68, _hScreen02,
+        y = 210 + row * 86;
+        hBtn = BUTTON_CreateEx(x, y, 232, 72, _hScreen02,
                                 WM_CF_SHOW, 0, GUI_ID_USER + 100 + i);
         BUTTON_SetText(hBtn, _BookTitles[i]);
         BUTTON_SetFont(hBtn, &GUI_Font16_ASCII);
@@ -104,21 +104,14 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
         WM_SetCallback(hBtn, _BookBtnCb);
         WM_SetUserData(hBtn, &i, sizeof(i));
       }
-      /* Reposition MINIBLUE (Open book) button to bottom */
+      /* Update existing AppWizard buttons - only text, NO repositioning */
       hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_00);
       if (hBtn) {
-        WM_MoveTo(hBtn, 312, 520);
-        WM_SetSize(hBtn, 400, 56);
-        BUTTON_SetText(hBtn, "Read Selected Book");
-        BUTTON_SetFont(hBtn, &GUI_Font16B_ASCII);
+        BUTTON_SetText(hBtn, "Read");
       }
-      /* Reposition Back button to bottom-right */
       hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_01);
       if (hBtn) {
-        WM_MoveTo(hBtn, 864, 520);
-        WM_SetSize(hBtn, 120, 56);
         BUTTON_SetText(hBtn, "Back");
-        BUTTON_SetFont(hBtn, &GUI_Font16B_ASCII);
       }
       break;
 
