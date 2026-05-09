@@ -10,9 +10,7 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File        : ID_SCREEN_02_Slots.c
-Purpose     : Book selection screen
-              Action flag set by BookSelect, navigation via timer
-              in SCREEN_02 callback (safe AppWizard context).
+Purpose     : Book selection - pure AppWizard: book buttons + slot nav
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -20,71 +18,53 @@ Purpose     : Book selection screen
 #include "../Generated/Resource.h"
 #include "../Generated/ID_SCREEN_02.h"
 #include "../Generated/ID_SCREEN_03.h"
-#include "BookSelect.h"
+#include "CustomWidgets.h"
+#include <string.h>
 #include <stdio.h>
 
 /*** Begin of user code area ***/
 
-#define TIMER_ACTION  10
+#define TIMER_INIT  1
+
+/* Book data (titles only for button labels) */
+static const char *_BookTitles[] = {
+    "San Ti - Liu Cixin",
+    "To Live - Yu Hua",
+    "Fortress Besieged - Qian Zhongshu",
+    "One Hundred Years - Garcia Marquez",
+    "Dream of Red Mansions - Cao Xueqin",
+    "Camel Xiangzi - Lao She",
+    "The Kite Runner - Khaled Hosseini",
+    "Ordinary World - Lu Yao",
+};
+#define BOOK_COUNT (sizeof(_BookTitles) / sizeof(_BookTitles[0]))
+
+static int     _Selected = 0;
+static WM_HMEM _hTimer  = 0;
+
+/* Standard emWin callback for book buttons - just records selection */
+static void _BookBtnCb(WM_MESSAGE *pMsg) {
+    switch (pMsg->MsgId) {
+        case WM_PAINT:
+            BUTTON_Callback(pMsg);
+            break;
+        case WM_NOTIFICATION_CLICKED:
+            {
+                int idx;
+                WM_GetUserData(pMsg->hWin, &idx, sizeof(idx));
+                _Selected = idx;
+            }
+            break;
+        default:
+            WM_DefaultProc(pMsg);
+            break;
+    }
+}
 
 static WM_HWIN _hScreen02 = 0;
-static WM_HMEM _hTimer    = 0;
-static int    _gAction    = 0;
 
-static void _DoOpen(void) {
-    const BOOK_INFO *bk;
-    APPW_ROOT_INFO *pRoot03;
-    WM_HWIN hReader, hItem;
-    char buf[32];
-
-    bk = BookSelect_GetSelectedBook();
-    pRoot03 = APPW_GetRootInfoByRootId(ID_SCREEN_03);
-    if (!pRoot03 || !bk) return;
-
-    hReader = APPW_CreateRoot(pRoot03, WM_HBKWIN);
-    if (!hReader) return;
-
-    hItem = WM_GetDialogItem(hReader, TEXT_TITLE);
-    if (hItem) TEXT_SetText(hItem, bk->Title);
-
-    hItem = WM_GetDialogItem(hReader, TEXT_PAGE);
-    sprintf(buf, "Page 1 / 10");
-    if (hItem) TEXT_SetText(hItem, buf);
-
-    hItem = WM_GetDialogItem(hReader, PROGRESS_BAR);
-    if (hItem) PROGBAR_SetValue(hItem, bk->Progress);
-
-    /* Trigger AppWizard SCREEN_02 → SCREEN_03 */
-    {
-        WM_HWIN hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_00);
-        if (hBtn) {
-            WM_MESSAGE msg;
-            msg.MsgId = WM_NOTIFY_PARENT;
-            msg.Data.v = WM_NOTIFICATION_CLICKED;
-            msg.hWinSrc = hBtn;
-            WM_SendMessage(_hScreen02, &msg);
-        }
-    }
-}
-
-static void _DoBack(void) {
-    WM_HWIN hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_01);
-    if (hBtn) {
-        WM_MESSAGE msg;
-        msg.MsgId = WM_NOTIFY_PARENT;
-        msg.Data.v = WM_NOTIFICATION_CLICKED;
-        msg.hWinSrc = hBtn;
-        WM_SendMessage(_hScreen02, &msg);
-    }
-}
-
-/* Called from BookSelect touch handler - sets flag, starts timer */
-static void _ActionCallback(int action) {
-    _gAction = action;
-    if (_hTimer == 0) {
-        _hTimer = WM_CreateTimer(_hScreen02, TIMER_ACTION, 50, 0);
-    }
-}
+/* From ID_SCREEN_03_Slots.c */
+extern void Reader_SetSelectedBook(int index);
 
 /*** End of user code area ***/
 
@@ -94,22 +74,51 @@ static void _ActionCallback(int action) {
 */
 
 void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
+  int i;
+  int col, row, x, y;
+  WM_HWIN hBtn;
+
   switch (pMsg->MsgId) {
     case WM_INIT_DIALOG:
       _hScreen02 = pMsg->hWin;
-      BookSelect_Create(_hScreen02, _ActionCallback);
-      BookSelect_Show();
+      _hTimer = WM_CreateTimer(_hScreen02, TIMER_INIT, 30, 0);
       break;
 
     case WM_TIMER:
       WM_DeleteTimer(_hTimer);
       _hTimer = 0;
-      if (_gAction == 1) {
-        _gAction = 0;
-        _DoOpen();
-      } else if (_gAction == 2) {
-        _gAction = 0;
-        _DoBack();
+      /* Create book selection buttons in 4-column grid */
+      for (i = 0; i < (int)BOOK_COUNT; i++) {
+        col = i % 4;
+        row = i / 4;
+        x = 16 + col * 248;
+        y = 16 + row * 80;
+        hBtn = BUTTON_CreateEx(x, y, 232, 68, _hScreen02,
+                                WM_CF_SHOW, 0, GUI_ID_USER + 100 + i);
+        BUTTON_SetText(hBtn, _BookTitles[i]);
+        BUTTON_SetFont(hBtn, &GUI_Font16_ASCII);
+        BUTTON_SetBkColor(hBtn, BUTTON_CI_UNPRESSED, COLOR_CARD_BG);
+        BUTTON_SetBkColor(hBtn, BUTTON_CI_PRESSED, COLOR_PRIMARY);
+        BUTTON_SetTextColor(hBtn, BUTTON_CI_UNPRESSED, COLOR_TEXT_PRIMARY);
+        BUTTON_SetTextColor(hBtn, BUTTON_CI_PRESSED, GUI_WHITE);
+        WM_SetCallback(hBtn, _BookBtnCb);
+        WM_SetUserData(hBtn, &i, sizeof(i));
+      }
+      /* Reposition MINIBLUE (Open book) button to bottom */
+      hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_00);
+      if (hBtn) {
+        WM_MoveTo(hBtn, 312, 520);
+        WM_SetSize(hBtn, 400, 56);
+        BUTTON_SetText(hBtn, "Read Selected Book");
+        BUTTON_SetFont(hBtn, &GUI_Font16B_ASCII);
+      }
+      /* Reposition Back button to bottom-right */
+      hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_01);
+      if (hBtn) {
+        WM_MoveTo(hBtn, 864, 520);
+        WM_SetSize(hBtn, 120, 56);
+        BUTTON_SetText(hBtn, "Back");
+        BUTTON_SetFont(hBtn, &GUI_Font16B_ASCII);
       }
       break;
 
@@ -121,11 +130,18 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
 /*********************************************************************
 *
 *       ID_SCREEN_02__ID_BUTTON_00__WM_NOTIFICATION_CLICKED
+*
+*  Emitter:  ID_BUTTON_00 (now "Read Selected Book")
+*  Job:      Update SCREEN_03 with selected book, then navigate
 */
 void ID_SCREEN_02__ID_BUTTON_00__WM_NOTIFICATION_CLICKED(APPW_ACTION_ITEM * pAction, WM_HWIN hScreen, WM_MESSAGE * pMsg, int * pResult) {
   GUI_USE_PARA(pAction);
-  GUI_USE_PARA(hScreen);
   GUI_USE_PARA(pMsg);
+
+  /* Tell SCREEN_03 which book was selected */
+  Reader_SetSelectedBook(_Selected);
+
+  /* Let AppWizard handle SCREEN_02 → SCREEN_03 transition */
   *pResult = 0;
 }
 
