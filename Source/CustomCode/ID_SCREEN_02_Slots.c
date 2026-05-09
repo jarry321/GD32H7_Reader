@@ -11,8 +11,8 @@
 ----------------------------------------------------------------------
 File        : ID_SCREEN_02_Slots.c
 Purpose     : Book selection screen
-              All AppWizard calls happen in callback, never from
-              BookSelect touch handler (avoids context crashes).
+              Action flag set by BookSelect, navigation via timer
+              in SCREEN_02 callback (safe AppWizard context).
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -25,8 +25,11 @@ Purpose     : Book selection screen
 
 /*** Begin of user code area ***/
 
+#define TIMER_ACTION  10
+
 static WM_HWIN _hScreen02 = 0;
-static int    _gAction  = 0;    /* 0=none, 1=open, 2=back */
+static WM_HMEM _hTimer    = 0;
+static int    _gAction    = 0;
 
 static void _DoOpen(void) {
     const BOOK_INFO *bk;
@@ -75,10 +78,12 @@ static void _DoBack(void) {
     }
 }
 
-/* Called from BookSelect touch handler - ONLY sets flag, NO AppWizard calls */
+/* Called from BookSelect touch handler - sets flag, starts timer */
 static void _ActionCallback(int action) {
     _gAction = action;
-    WM_InvalidateWindow(_hScreen02);
+    if (_hTimer == 0) {
+        _hTimer = WM_CreateTimer(_hScreen02, TIMER_ACTION, 50, 0);
+    }
 }
 
 /*** End of user code area ***/
@@ -96,7 +101,9 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
       BookSelect_Show();
       break;
 
-    case WM_PAINT:
+    case WM_TIMER:
+      WM_DeleteTimer(_hTimer);
+      _hTimer = 0;
       if (_gAction == 1) {
         _gAction = 0;
         _DoOpen();
