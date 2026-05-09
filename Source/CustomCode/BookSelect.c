@@ -4,8 +4,8 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File        : BookSelect.c
-Purpose     : Book selection overlay - draws grid, sets selected book
-              Navigation handled by AppWizard buttons on SCREEN_02
+Purpose     : Book Selection Screen
+              Draws grid, handles card selection, action buttons
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -29,8 +29,9 @@ static BOOK_INFO _Books[] = {
 };
 #define BOOK_COUNT (sizeof(_Books) / sizeof(_Books[0]))
 
-static int     _SelectedIndex = 0;
-static WM_HWIN _hScreen = 0;
+static int          _SelectedIndex = 0;
+static WM_HWIN      _hScreen = 0;
+static BS_ACTION_CB _ActionCb = 0;
 
 /*********************************************************************
 *
@@ -106,18 +107,30 @@ static void _DrawCard(int index) {
 *       _DrawHeader
 */
 static void _DrawHeader(void) {
+    /* Header background */
     GUI_SetColor(COLOR_CARD_BG);
     GUI_FillRect(0, 0, BOOKSELECT_WIDTH, BS_HEADER_H);
     GUI_SetColor(COLOR_DIVIDER);
     GUI_DrawHLine(BS_HEADER_H - 1, 0, BOOKSELECT_WIDTH);
 
+    /* Back button area */
     GUI_SetColor(COLOR_PRIMARY);
+    GUI_FillRoundedRect(16, 10, 80, BS_HEADER_H - 10, 6);
+    GUI_SetColor(GUI_WHITE);
     GUI_SetFont(&GUI_Font16_ASCII);
-    GUI_DispStringAt("<- Back", 16, 18);
+    GUI_DispStringAt("Back", 30, 18);
 
+    /* Title */
     GUI_SetColor(COLOR_TEXT_PRIMARY);
     GUI_SetFont(&GUI_Font24B_ASCII);
     GUI_DispStringAt("My Books", (BOOKSELECT_WIDTH - 120) / 2, 12);
+
+    /* Open button area */
+    GUI_SetColor(COLOR_SUCCESS);
+    GUI_FillRoundedRect(BOOKSELECT_WIDTH - 136, 10, BOOKSELECT_WIDTH - 16, BS_HEADER_H - 10, 6);
+    GUI_SetColor(GUI_WHITE);
+    GUI_SetFont(&GUI_Font16B_ASCII);
+    GUI_DispStringAt("Open", BOOKSELECT_WIDTH - 120, 18);
 }
 
 /*********************************************************************
@@ -144,12 +157,27 @@ static void _OnTouch(WM_MESSAGE *pMsg) {
 
     if (!pState || !pState->Pressed) return;
 
+    /* Header - Back button */
+    if (pState->y <= BS_HEADER_H) {
+        if (pState->x >= 16 && pState->x <= 80) {
+            if (_ActionCb) _ActionCb(1);  /* Back */
+            return;
+        }
+        if (pState->x >= BOOKSELECT_WIDTH - 136 && pState->x <= BOOKSELECT_WIDTH - 16) {
+            if (_ActionCb) _ActionCb(0);  /* Open */
+            return;
+        }
+        return;
+    }
+
+    /* Book cards */
     for (i = 0; i < (int)BOOK_COUNT; i++) {
         GUI_RECT r;
         _GetCardRect(i, &r);
         if (pState->x >= r.x0 && pState->x <= r.x1 &&
             pState->y >= r.y0 && pState->y <= r.y1) {
             _SelectedIndex = i;
+            WM_InvalidateWindow(_hScreen);
             return;
         }
     }
@@ -174,11 +202,12 @@ void cbBookSelect(WM_MESSAGE *pMsg) {
     }
 }
 
-void BookSelect_Create(WM_HWIN hNotify) {
+void BookSelect_Create(WM_HWIN hParent, BS_ACTION_CB cb) {
+    _ActionCb = cb;
     if (_hScreen == 0) {
         _hScreen = WM_CreateWindowAsChild(0, 0,
             BOOKSELECT_WIDTH, BOOKSELECT_HEIGHT,
-            hNotify, WM_CF_SHOW | WM_CF_MEMDEV,
+            hParent, WM_CF_SHOW | WM_CF_MEMDEV,
             cbBookSelect, 0);
     }
 }
