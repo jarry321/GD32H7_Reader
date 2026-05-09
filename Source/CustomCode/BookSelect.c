@@ -183,11 +183,15 @@ static void _OnTouch(WM_MESSAGE *pMsg) {
 
     if (!pState || !pState->Pressed) return;
 
-    /* Check Back button */
+    /* Check Back button - return to SCREEN_00 main menu */
     if (pState->x >= 0 && pState->x <= 100 &&
         pState->y >= 0 && pState->y <= BS_HEADER_H) {
+        APPW_ROOT_INFO *pRoot = APPW_GetRootInfoByRootId(ID_SCREEN_00);
         BookSelect_Hide();
-        WM_ShowWindow(WM_HBKWIN);
+        if (pRoot) {
+            WM_HWIN hRoot = APPW_CreateRoot(pRoot, WM_HBKWIN);
+            WM_ShowWindow(hRoot);
+        }
         return;
     }
 

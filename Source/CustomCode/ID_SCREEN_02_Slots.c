@@ -17,6 +17,7 @@ Purpose     : AppWizard managed file, function content could be changed
 #include "Application.h"
 #include "../Generated/Resource.h"
 #include "../Generated/ID_SCREEN_02.h"
+#include "BookSelect.h"
 
 /*** Begin of user code area ***/
 /*** End of user code area ***/
@@ -32,7 +33,14 @@ Purpose     : AppWizard managed file, function content could be changed
 *       cbID_SCREEN_02
 */
 void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
-  GUI_USE_PARA(pMsg);
+  switch (pMsg->MsgId) {
+    case WM_INIT_DIALOG:
+      BookSelect_Create();
+      BookSelect_Show();
+      break;
+    default:
+      break;
+  }
 }
 
 /*********************************************************************
