@@ -4,8 +4,8 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File        : BookSelect.c
-Purpose     : Book Selection Screen - Custom drawn screen showing
-              a grid of book cards for user selection
+Purpose     : Book selection overlay - draws grid, sets selected book
+              Navigation handled by AppWizard buttons on SCREEN_02
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -31,7 +31,6 @@ static BOOK_INFO _Books[] = {
 
 static int     _SelectedIndex = 0;
 static WM_HWIN _hScreen = 0;
-static WM_HWIN _hNotify  = 0;   /* Window to notify on book selection */
 
 /*********************************************************************
 *
@@ -53,23 +52,17 @@ static void _GetCardRect(int index, GUI_RECT *pRect) {
 static void _DrawCard(int index) {
     GUI_RECT r;
     BOOK_INFO *bk = &_Books[index];
-    int titleY, authorY, progY;
-    int cx, cy;
-    char letter[2];
-    char buf[16];
-    int barW, fillW;
+    int titleY, authorY, progY, cx, cy, barW, fillW;
+    char letter[2], buf[16];
 
     _GetCardRect(index, &r);
 
-    /* Card border */
     GUI_SetColor(COLOR_DIVIDER);
     GUI_DrawRoundedRect(r.x0, r.y0, r.x1, r.y1, 10);
 
-    /* Cover area */
     GUI_SetColor(bk->CoverColor);
     GUI_FillRoundedRect(r.x0 + 2, r.y0 + 2, r.x1 - 2, r.y0 + COVER_H, 8);
 
-    /* Cover letter */
     cx = (r.x0 + r.x1) / 2;
     cy = r.y0 + COVER_H / 2;
     GUI_SetColor(GUI_WHITE);
@@ -78,23 +71,19 @@ static void _DrawCard(int index) {
     letter[1] = '\0';
     GUI_DispStringAt(letter, cx - 14, cy - 20);
 
-    /* Card body */
     GUI_SetColor(COLOR_CARD_BG);
     GUI_FillRoundedRect(r.x0 + 2, r.y0 + COVER_H, r.x1 - 2, r.y1 - 2, 0);
 
-    /* Title */
     titleY = r.y0 + COVER_H + 10;
     GUI_SetColor(COLOR_TEXT_PRIMARY);
     GUI_SetFont(&GUI_Font16B_ASCII);
     GUI_DispStringAt(bk->Title, r.x0 + 12, titleY);
 
-    /* Author */
     authorY = titleY + 24;
     GUI_SetColor(COLOR_TEXT_SECONDARY);
     GUI_SetFont(&GUI_Font13_ASCII);
     GUI_DispStringAt(bk->Author, r.x0 + 12, authorY);
 
-    /* Progress bar */
     progY = authorY + 24;
     barW = CARD_W - 24;
     GUI_SetColor(COLOR_DIVIDER);
@@ -106,7 +95,6 @@ static void _DrawCard(int index) {
         GUI_FillRoundedRect(r.x0 + 12, progY, r.x0 + 12 + fillW, progY + 6, 3);
     }
 
-    /* Progress text */
     GUI_SetColor(COLOR_TEXT_SECONDARY);
     GUI_SetFont(&GUI_Font13_ASCII);
     sprintf(buf, "%d%%", bk->Progress);
@@ -156,25 +144,12 @@ static void _OnTouch(WM_MESSAGE *pMsg) {
 
     if (!pState || !pState->Pressed) return;
 
-    /* Back button → notify parent to return to main menu */
-    if (pState->x >= 0 && pState->x <= 100 &&
-        pState->y >= 0 && pState->y <= BS_HEADER_H) {
-        if (_hNotify) {
-            WM_SendMessageNoPara(_hNotify, WM_USER + 0x11);
-        }
-        return;
-    }
-
-    /* Book card touch → notify parent which handles navigation */
     for (i = 0; i < (int)BOOK_COUNT; i++) {
         GUI_RECT r;
         _GetCardRect(i, &r);
         if (pState->x >= r.x0 && pState->x <= r.x1 &&
             pState->y >= r.y0 && pState->y <= r.y1) {
             _SelectedIndex = i;
-            if (_hNotify) {
-                WM_SendMessageNoPara(_hNotify, WM_BOOK_SELECTED);
-            }
             return;
         }
     }
@@ -200,7 +175,6 @@ void cbBookSelect(WM_MESSAGE *pMsg) {
 }
 
 void BookSelect_Create(WM_HWIN hNotify) {
-    _hNotify = hNotify;
     if (_hScreen == 0) {
         _hScreen = WM_CreateWindowAsChild(0, 0,
             BOOKSELECT_WIDTH, BOOKSELECT_HEIGHT,
@@ -210,9 +184,7 @@ void BookSelect_Create(WM_HWIN hNotify) {
 }
 
 void BookSelect_Show(void) {
-    if (_hScreen == 0) {
-        BookSelect_Create(0);
-    }
+    if (_hScreen == 0) return;
     WM_ShowWindow(_hScreen);
     WM_BringToTop(_hScreen);
     WM_InvalidateWindow(_hScreen);
