@@ -11,7 +11,8 @@
 ----------------------------------------------------------------------
 File        : ID_SCREEN_02_Slots.c
 Purpose     : Book selection screen
-              Action callback triggers AppWizard navigation
+              All AppWizard calls happen in callback, never from
+              BookSelect touch handler (avoids context crashes).
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -25,44 +26,59 @@ Purpose     : Book selection screen
 /*** Begin of user code area ***/
 
 static WM_HWIN _hScreen02 = 0;
+static int    _gAction  = 0;    /* 0=none, 1=open, 2=back */
 
-static void _TriggerAppWizardButton(WM_HWIN hScreen, int btnId) {
-    WM_HWIN hBtn = WM_GetDialogItem(hScreen, btnId);
+static void _DoOpen(void) {
+    const BOOK_INFO *bk;
+    APPW_ROOT_INFO *pRoot03;
+    WM_HWIN hReader, hItem;
+    char buf[32];
+
+    bk = BookSelect_GetSelectedBook();
+    pRoot03 = APPW_GetRootInfoByRootId(ID_SCREEN_03);
+    if (!pRoot03 || !bk) return;
+
+    hReader = APPW_CreateRoot(pRoot03, WM_HBKWIN);
+    if (!hReader) return;
+
+    hItem = WM_GetDialogItem(hReader, TEXT_TITLE);
+    if (hItem) TEXT_SetText(hItem, bk->Title);
+
+    hItem = WM_GetDialogItem(hReader, TEXT_PAGE);
+    sprintf(buf, "Page 1 / 10");
+    if (hItem) TEXT_SetText(hItem, buf);
+
+    hItem = WM_GetDialogItem(hReader, PROGRESS_BAR);
+    if (hItem) PROGBAR_SetValue(hItem, bk->Progress);
+
+    /* Trigger AppWizard SCREEN_02 → SCREEN_03 */
+    {
+        WM_HWIN hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_00);
+        if (hBtn) {
+            WM_MESSAGE msg;
+            msg.MsgId = WM_NOTIFY_PARENT;
+            msg.Data.v = WM_NOTIFICATION_CLICKED;
+            msg.hWinSrc = hBtn;
+            WM_SendMessage(_hScreen02, &msg);
+        }
+    }
+}
+
+static void _DoBack(void) {
+    WM_HWIN hBtn = WM_GetDialogItem(_hScreen02, ID_BUTTON_01);
     if (hBtn) {
         WM_MESSAGE msg;
         msg.MsgId = WM_NOTIFY_PARENT;
         msg.Data.v = WM_NOTIFICATION_CLICKED;
         msg.hWinSrc = hBtn;
-        WM_SendMessage(hScreen, &msg);
+        WM_SendMessage(_hScreen02, &msg);
     }
 }
 
-/* Called from BookSelect touch handler on Back(1) or Open(0) */
+/* Called from BookSelect touch handler - ONLY sets flag, NO AppWizard calls */
 static void _ActionCallback(int action) {
-    if (action == 0) {
-        /* Open: set SCREEN_03 data BEFORE AppWizard transitions */
-        const BOOK_INFO *bk = BookSelect_GetSelectedBook();
-        APPW_ROOT_INFO *pRoot03 = APPW_GetRootInfoByRootId(ID_SCREEN_03);
-        if (pRoot03 && bk) {
-            WM_HWIN hReader, hItem;
-            char buf[32];
-            hReader = APPW_CreateRoot(pRoot03, WM_HBKWIN);
-            if (hReader) {
-                hItem = WM_GetDialogItem(hReader, TEXT_TITLE);
-                if (hItem) TEXT_SetText(hItem, bk->Title);
-                hItem = WM_GetDialogItem(hReader, TEXT_PAGE);
-                sprintf(buf, "Page 1 / 10");
-                if (hItem) TEXT_SetText(hItem, buf);
-                hItem = WM_GetDialogItem(hReader, PROGRESS_BAR);
-                if (hItem) PROGBAR_SetValue(hItem, bk->Progress);
-            }
-        }
-        /* Let AppWizard do SCREEN_02 → SCREEN_03 transition */
-        _TriggerAppWizardButton(_hScreen02, ID_BUTTON_00);
-    } else {
-        /* Back: let AppWizard do SCREEN_02 → SCREEN_00 transition */
-        _TriggerAppWizardButton(_hScreen02, ID_BUTTON_01);
-    }
+    _gAction = action;
+    WM_InvalidateWindow(_hScreen02);
 }
 
 /*** End of user code area ***/
@@ -79,6 +95,17 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
       BookSelect_Create(_hScreen02, _ActionCallback);
       BookSelect_Show();
       break;
+
+    case WM_PAINT:
+      if (_gAction == 1) {
+        _gAction = 0;
+        _DoOpen();
+      } else if (_gAction == 2) {
+        _gAction = 0;
+        _DoBack();
+      }
+      break;
+
     default:
       break;
   }
