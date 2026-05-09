@@ -11,6 +11,7 @@ Purpose     : Book Selection Screen - Custom drawn screen showing
 
 #include "BookSelect.h"
 #include "../Generated/Resource.h"
+#include "../Generated/ID_SCREEN_02.h"
 #include "../Generated/ID_SCREEN_03.h"
 #include <string.h>
 #include <stdio.h>
@@ -202,29 +203,35 @@ static void _OnTouch(WM_MESSAGE *pMsg) {
         if (pState->x >= r.x0 && pState->x <= r.x1 &&
             pState->y >= r.y0 && pState->y <= r.y1) {
             _SelectedIndex = i;
-            WM_InvalidateWindow(_hScreen);
-            /* Navigate to reader, push selected book data to SCREEN_03 */
             BookSelect_Hide();
+
+            /* Update SCREEN_03 widgets with selected book, then navigate */
             {
-                APPW_ROOT_INFO *pRoot = APPW_GetRootInfoByRootId(ID_SCREEN_03);
-                if (pRoot) {
-                    WM_HWIN hRoot;
+                APPW_ROOT_INFO *pRoot03 = APPW_GetRootInfoByRootId(ID_SCREEN_03);
+                APPW_ROOT_INFO *pRoot02 = APPW_GetRootInfoByRootId(ID_SCREEN_02);
+                BOOK_INFO *bk = &_Books[_SelectedIndex];
+
+                /* Pre-set SCREEN_03 content */
+                if (pRoot03) {
+                    WM_HWIN hReader = APPW_CreateRoot(pRoot03, WM_HBKWIN);
                     char buf[32];
-                    BOOK_INFO *bk = &_Books[_SelectedIndex];
-
-                    hRoot = APPW_CreateRoot(pRoot, WM_HBKWIN);
-
-                    /* Update title */
-                    TEXT_SetText(WM_GetDialogItem(hRoot, TEXT_TITLE), bk->Title);
-
-                    /* Update page info */
+                    TEXT_SetText(WM_GetDialogItem(hReader, TEXT_TITLE), bk->Title);
                     sprintf(buf, "Page 1 / 10");
-                    TEXT_SetText(WM_GetDialogItem(hRoot, TEXT_PAGE), buf);
+                    TEXT_SetText(WM_GetDialogItem(hReader, TEXT_PAGE), buf);
+                    PROGBAR_SetValue(WM_GetDialogItem(hReader, PROGRESS_BAR), bk->Progress);
+                }
 
-                    /* Update progress bar */
-                    PROGBAR_SetValue(WM_GetDialogItem(hRoot, PROGRESS_BAR), bk->Progress);
-
-                    WM_ShowWindow(hRoot);
+                /* Trigger AppWizard transition SCREEN_02 → SCREEN_03 */
+                if (pRoot02) {
+                    WM_HWIN hScreen02 = APPW_CreateRoot(pRoot02, WM_HBKWIN);
+                    WM_HWIN hBtn = WM_GetDialogItem(hScreen02, ID_BUTTON_00);
+                    if (hBtn) {
+                        WM_MESSAGE msg;
+                        msg.MsgId = WM_NOTIFY_PARENT;
+                        msg.Data.v = WM_NOTIFICATION_CLICKED;
+                        msg.hWinSrc = hBtn;
+                        WM_SendMessage(hScreen02, &msg);
+                    }
                 }
             }
             return;

@@ -43,11 +43,9 @@ void cbID_SCREEN_03(WM_MESSAGE * pMsg) {
             TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_TITLE), _pCurrentBook->Title);
         }
 
-        // Set page info
         sprintf(_sPageInfo, "Page 1 / 10");
         TEXT_SetText(WM_GetDialogItem(pMsg->hWin, TEXT_PAGE), _sPageInfo);
 
-        // Set progress bar to match book progress
         PROGBAR_SetValue(WM_GetDialogItem(pMsg->hWin, PROGRESS_BAR),
                          _pCurrentBook ? _pCurrentBook->Progress : 0);
         break;
