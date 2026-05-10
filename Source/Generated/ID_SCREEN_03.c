@@ -209,6 +209,14 @@ static GUI_CONST_STORAGE APPW_ACTION_ITEM _aAction[] = {
     { ARG_V(ID_SCREEN_02),
     }, 0, NULL
   },
+  { BTN_PREV,     WM_NOTIFICATION_CLICKED,          0,            0,                       ID_SCREEN_03__BTN_PREV__WM_NOTIFICATION_CLICKED,
+    { ARG_V(0),
+    }, 0, NULL
+  },
+  { BTN_NEXT,     WM_NOTIFICATION_CLICKED,          0,            0,                       ID_SCREEN_03__BTN_NEXT__WM_NOTIFICATION_CLICKED,
+    { ARG_V(0),
+    }, 0, NULL
+  },
 };
 
 /*********************************************************************
