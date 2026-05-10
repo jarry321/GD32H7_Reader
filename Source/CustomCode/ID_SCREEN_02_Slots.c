@@ -78,7 +78,7 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
         col = i % 4;
         row = i / 4;
         x = 16 + col * 246;
-        y = 56 + row * 72;
+        y = 220 + row * 72;
         hBtn = BUTTON_CreateEx(x, y, 230, 60, pMsg->hWin,
                                 WM_CF_SHOW, 0, GUI_ID_USER + 100 + i);
         BUTTON_SetText(hBtn, _BookTitles[i]);
