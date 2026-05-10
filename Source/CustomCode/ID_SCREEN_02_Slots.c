@@ -23,8 +23,6 @@ Purpose     : Book selection - book buttons created as children of
 
 /*** Begin of user code area ***/
 
-#define TIMER_INIT  1
-
 static const char *_BookTitles[] = {
     "San Ti - Liu Cixin",
     "To Live - Yu Hua",
@@ -38,7 +36,6 @@ static const char *_BookTitles[] = {
 #define BOOK_COUNT (sizeof(_BookTitles) / sizeof(_BookTitles[0]))
 
 static int     _Selected = 0;
-static WM_HMEM _hTimer  = 0;
 
 /* Book button callback - only records selection, no AppWizard calls */
 static void _BookBtnCb(WM_MESSAGE *pMsg) {
@@ -67,13 +64,6 @@ void cbID_SCREEN_02(WM_MESSAGE * pMsg) {
 
   switch (pMsg->MsgId) {
     case WM_INIT_DIALOG:
-      _hTimer = WM_CreateTimer(pMsg->hWin, TIMER_INIT, 30, 0);
-      break;
-
-    case WM_TIMER:
-      WM_DeleteTimer(_hTimer);
-      _hTimer = 0;
-      /* Create 8 book buttons as children of SCREEN_02 */
       for (i = 0; i < (int)BOOK_COUNT; i++) {
         col = i % 4;
         row = i / 4;
